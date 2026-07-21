@@ -29,6 +29,14 @@
         <button id="stop" class="secondary" disabled>Stop detection</button>
       </div>
       <div class="detection-settings">
+        <label for="camera-select">
+          Detection camera
+          <span>Select which camera the model should use.</span>
+        </label>
+        <div class="camera-picker">
+          <select id="camera-select" aria-label="Detection camera"><option value="">Default camera</option></select>
+          <button id="refresh-cameras" class="secondary" type="button">Find cameras</button>
+        </div>
         <label for="confidence-input">
           Minimum confidence
           <span>Higher values reduce false detections.</span>
@@ -71,6 +79,6 @@
       </div>
     </section>
   </main>
-  <script src="{{ url_for('static', filename='app.js') }}?v=7"></script>
+  <script src="{{ url_for('static', filename='app.js') }}?v=8"></script>
 </body>
 </html>

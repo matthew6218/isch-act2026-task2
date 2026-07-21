@@ -87,6 +87,39 @@ async function loadSettings() {
   log("Settings loaded from config.txt", settings);
 }
 
+async function refreshCameraList(requestPermission = false) {
+  if (!navigator.mediaDevices?.enumerateDevices) {
+    throw new Error("Camera selection is not supported by this browser.");
+  }
+  let permissionStream;
+  try {
+    // Browsers normally hide camera names until permission is granted.
+    if (requestPermission) permissionStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const devices = (await navigator.mediaDevices.enumerateDevices())
+      .filter((device) => device.kind === "videoinput");
+    const previousSelection = $("camera-select").value;
+    const options = devices.map((device, index) => {
+      const option = document.createElement("option");
+      option.value = device.deviceId;
+      option.textContent = device.label || `Camera ${index + 1}`;
+      return option;
+    });
+    if (!options.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "Default camera";
+      options.push(option);
+    }
+    $("camera-select").replaceChildren(...options);
+    if (devices.some((device) => device.deviceId === previousSelection)) {
+      $("camera-select").value = previousSelection;
+    }
+    log("Camera list updated", devices.map((device, index) => device.label || `Camera ${index + 1}`));
+  } finally {
+    permissionStream?.getTracks().forEach((track) => track.stop());
+  }
+}
+
 function elapsedSeconds() {
   return competitionStartedAt ? (performance.now() - competitionStartedAt) / 1000 : 0;
 }
@@ -144,9 +177,11 @@ async function start() {
       throw new Error(`Model is missing classes: ${missing.map((target) => target.className).join(", ")}. Found: ${labels.join(", ")}`);
     }
 
+    const selectedCameraId = $("camera-select").value;
     webcam = new tmImage.Webcam(420, 420, true);
-    await webcam.setup();
+    await webcam.setup(selectedCameraId ? { deviceId: { exact: selectedCameraId } } : {});
     await webcam.play();
+    await refreshCameraList(false);
     $("webcam").replaceChildren(webcam.canvas);
     running = true;
     setDetectionControls(true);
@@ -171,6 +206,8 @@ function setDetectionControls(isRunning) {
   $("model-url").disabled = isRunning;
   $("confidence-input").disabled = isRunning;
   $("stable-input").disabled = isRunning;
+  $("camera-select").disabled = isRunning;
+  $("refresh-cameras").disabled = isRunning;
 }
 
 function stopDetection() {
@@ -257,6 +294,17 @@ function finishCompetition(won) {
 
 $("start").addEventListener("click", start);
 $("stop").addEventListener("click", stopDetection);
+$("refresh-cameras").addEventListener("click", async () => {
+  $("refresh-cameras").disabled = true;
+  try {
+    await refreshCameraList(true);
+    $("status").textContent = "Camera list updated. Select a camera, then start detection.";
+  } catch (error) {
+    $("status").textContent = `Could not list cameras: ${errorMessage(error)}`;
+  } finally {
+    $("refresh-cameras").disabled = false;
+  }
+});
 $("reset").addEventListener("click", resetCompetition);
 $("copy-log").addEventListener("click", async () => {
   try {
@@ -271,8 +319,13 @@ window.addEventListener("error", (event) => log("Browser error", event.message))
 window.addEventListener("unhandledrejection", (event) => log("Unhandled rejection", errorMessage(event.reason)));
 loadSettings().then(() => {
   $("status").textContent = "Settings loaded. Waiting to start.";
+  refreshCameraList(false).catch((error) => log("Could not list cameras yet", errorMessage(error)));
 }).catch((error) => {
   $("status").textContent = `Configuration error: ${errorMessage(error)}`;
   $("start").disabled = true;
   log("Configuration failed", errorMessage(error));
+});
+
+navigator.mediaDevices?.addEventListener?.("devicechange", () => {
+  if (!running) refreshCameraList(false).catch((error) => log("Camera refresh failed", errorMessage(error)));
 });

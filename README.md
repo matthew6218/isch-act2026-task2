@@ -25,6 +25,8 @@ Open <http://127.0.0.1:5000> and select **Start detection**. By default, the app
 
 Before clicking **Start detection**, users can adjust **Minimum confidence** and **Accurate detection time** directly on the webpage. These controls are locked while detection is running. Click **Stop detection** to pause the camera and edit them again.
 
+Use **Detection camera** to choose among connected cameras. If camera names are hidden, click **Find cameras** and allow permission; the temporary permission stream closes immediately after the list is loaded. Stop detection before switching cameras.
+
 Speech uses the Web Speech API directly in the browser, so no audio files or extra Python text-to-speech dependency is required.
 
 ## Customize without editing code

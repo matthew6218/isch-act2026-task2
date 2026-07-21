@@ -75,6 +75,12 @@ async function loadSettings() {
   if (!$("model-url").value.trim() && settings.modelUrl) {
     $("model-url").value = settings.modelUrl;
   }
+  if (!$("confidence-input").value) {
+    $("confidence-input").value = Math.round(settings.confidenceThreshold * 100);
+  }
+  if (!$("stable-input").value) {
+    $("stable-input").value = settings.requiredStableMs / 1000;
+  }
   renderTasks();
   $("completed-count").textContent = `0 / ${settings.winRequiredTargets}`;
   $("reset").disabled = false;
@@ -117,6 +123,16 @@ async function start() {
   $("status").textContent = "Loading image model...";
   try {
     await loadSettings();
+    const confidencePercent = Number($("confidence-input").value);
+    const stableSeconds = Number($("stable-input").value);
+    if (!Number.isFinite(confidencePercent) || confidencePercent < 1 || confidencePercent > 100) {
+      throw new Error("Minimum confidence must be between 1% and 100%.");
+    }
+    if (!Number.isFinite(stableSeconds) || stableSeconds < 0.1 || stableSeconds > 10) {
+      throw new Error("Accurate detection time must be between 0.1 and 10 seconds.");
+    }
+    settings.confidenceThreshold = confidencePercent / 100;
+    settings.requiredStableMs = stableSeconds * 1000;
     if (!window.tf || !window.tmImage) throw new Error("Recognition libraries did not load. Check the internet connection.");
     const base = normalizeModelBase($("model-url").value);
     model = await tmImage.load(`${base}model.json`, `${base}metadata.json`);
@@ -133,6 +149,7 @@ async function start() {
     await webcam.play();
     $("webcam").replaceChildren(webcam.canvas);
     running = true;
+    setDetectionControls(true);
     resetCompetition();
     const timeRule = settings.winTimeLimitSeconds > 0
       ? ` within ${settings.winTimeLimitSeconds} seconds`
@@ -146,6 +163,28 @@ async function start() {
     $("start").disabled = false;
     log("Start failed", message);
   }
+}
+
+function setDetectionControls(isRunning) {
+  $("start").disabled = isRunning;
+  $("stop").disabled = !isRunning;
+  $("model-url").disabled = isRunning;
+  $("confidence-input").disabled = isRunning;
+  $("stable-input").disabled = isRunning;
+}
+
+function stopDetection() {
+  if (!running) return;
+  running = false;
+  clearInterval(timerId);
+  if (webcam && typeof webcam.stop === "function") webcam.stop();
+  $("webcam").innerHTML = "<p>Camera preview</p>";
+  $("meter-fill").style.width = "0%";
+  $("detected-target").textContent = "\u2014";
+  $("confidence").textContent = "0%";
+  $("status").textContent = "Detection stopped. Edit the settings or start again.";
+  setDetectionControls(false);
+  log("Detection stopped");
 }
 
 async function loop(now) {
@@ -180,8 +219,9 @@ async function loop(now) {
   } catch (error) {
     running = false;
     clearInterval(timerId);
+    if (webcam && typeof webcam.stop === "function") webcam.stop();
+    setDetectionControls(false);
     $("status").textContent = `Prediction failed: ${errorMessage(error)}`;
-    $("start").disabled = false;
     return;
   }
   requestAnimationFrame(loop);
@@ -216,6 +256,7 @@ function finishCompetition(won) {
 }
 
 $("start").addEventListener("click", start);
+$("stop").addEventListener("click", stopDetection);
 $("reset").addEventListener("click", resetCompetition);
 $("copy-log").addEventListener("click", async () => {
   try {

@@ -25,9 +25,22 @@
       <label for="model-url">Teachable Machine model location</label>
       <div class="url-row">
         <input id="model-url" value="" placeholder="https://teachablemachine.withgoogle.com/models/xxxxx/">
-        <button id="start">Start competition</button>
+        <button id="start">Start detection</button>
+        <button id="stop" class="secondary" disabled>Stop detection</button>
       </div>
-      <small>The initial URL and all detection settings are loaded from <code>config.txt</code>. You may still change the URL here before starting.</small>
+      <div class="detection-settings">
+        <label for="confidence-input">
+          Minimum confidence
+          <span>Higher values reduce false detections.</span>
+        </label>
+        <div class="number-input"><input id="confidence-input" type="number" min="1" max="100" step="1"><b>%</b></div>
+        <label for="stable-input">
+          Accurate detection time
+          <span>How long the result must stay confident.</span>
+        </label>
+        <div class="number-input"><input id="stable-input" type="number" min="0.1" max="10" step="0.1"><b>seconds</b></div>
+      </div>
+      <small>Defaults are loaded from <code>config.txt</code>. Detection starts only after clicking <strong>Start detection</strong>.</small>
       <p id="status" role="status">Waiting to start.</p>
       <details class="diagnostics">
         <summary>Diagnostic log</summary>
@@ -58,6 +71,6 @@
       </div>
     </section>
   </main>
-  <script src="{{ url_for('static', filename='app.js') }}?v=6"></script>
+  <script src="{{ url_for('static', filename='app.js') }}?v=7"></script>
 </body>
 </html>

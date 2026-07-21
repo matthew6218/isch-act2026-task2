@@ -21,7 +21,9 @@ python -m pip install -r requirements.txt
 python app.py
 ```
 
-Open <http://127.0.0.1:5000> and select **Start competition**. The app requires at least 85% confidence held for 0.6 seconds. A target must leave the camera briefly before the same announcement can play again. The timer stops when all three tasks are complete.
+Open <http://127.0.0.1:5000> and select **Start detection**. By default, the app requires at least 85% confidence held for 0.6 seconds. A target must leave the camera briefly before the same announcement can play again. The timer stops when the configured win condition is reached.
+
+Before clicking **Start detection**, users can adjust **Minimum confidence** and **Accurate detection time** directly on the webpage. These controls are locked while detection is running. Click **Stop detection** to pause the camera and edit them again.
 
 Speech uses the Web Speech API directly in the browser, so no audio files or extra Python text-to-speech dependency is required.
 

@@ -70,7 +70,11 @@ async function loadSettings() {
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || "Could not load config.txt");
   settings = data;
-  $("model-url").value = settings.modelUrl;
+  // Preserve a URL pasted by the user when settings are refreshed on Start.
+  // The config value is only used when the input is still empty.
+  if (!$("model-url").value.trim() && settings.modelUrl) {
+    $("model-url").value = settings.modelUrl;
+  }
   renderTasks();
   $("completed-count").textContent = `0 / ${settings.winRequiredTargets}`;
   $("reset").disabled = false;

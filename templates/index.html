@@ -27,7 +27,7 @@
         <input id="model-url" value="" placeholder="https://teachablemachine.withgoogle.com/models/xxxxx/">
         <button id="start">Start competition</button>
       </div>
-      <small>Train classes named <code>Pen</code>, <code>Helicea</code>, and <code>Connie</code>. Paste the shared model URL or export it to <code>static/model/</code>.</small>
+      <small>The initial URL and all detection settings are loaded from <code>config.txt</code>. You may still change the URL here before starting.</small>
       <p id="status" role="status">Waiting to start.</p>
       <details class="diagnostics">
         <summary>Diagnostic log</summary>
@@ -52,16 +52,12 @@
           <div><strong id="completed-count">0 / 3</strong><span>Tasks</span></div>
           <div><strong id="time">0.0s</strong><span>Time</span></div>
         </div>
-        <ul class="task-list">
-          <li data-target="pen"><span>✓</span><div><strong>Detect a pen</strong><small>“This is a pen.”</small></div></li>
-          <li data-target="helicea"><span>✓</span><div><strong>Detect Helicea</strong><small>“Hello Helicea.”</small></div></li>
-          <li data-target="connie"><span>✓</span><div><strong>Detect Connie</strong><small>“Hello Connie.”</small></div></li>
-        </ul>
+        <ul id="task-list" class="task-list"></ul>
         <p class="last-spoken">Last speech: <strong id="last-message">No message played yet.</strong></p>
-        <button id="reset" class="secondary">Reset competition</button>
+        <button id="reset" class="secondary" disabled>Reset competition</button>
       </div>
     </section>
   </main>
-  <script src="{{ url_for('static', filename='app.js') }}?v=4"></script>
+  <script src="{{ url_for('static', filename='app.js') }}?v=5"></script>
 </body>
 </html>

@@ -1,0 +1,22 @@
+# AI Detection Mini Competition settings
+# Edit the values after =, save this file, then refresh the web page.
+# Confidence must be between 0 and 1. Timing values are milliseconds.
+
+MODEL_URL=
+CONFIDENCE_THRESHOLD=0.85
+REQUIRED_STABLE_MS=600
+REARM_MS=900
+SPEECH_LANGUAGE=en-US
+SPEECH_RATE=1.0
+
+TARGET_1_CLASS=Pen
+TARGET_1_LABEL=Pen
+TARGET_1_SPEECH=This is a pen.
+
+TARGET_2_CLASS=Helicea
+TARGET_2_LABEL=Helicea
+TARGET_2_SPEECH=Hello Helicea.
+
+TARGET_3_CLASS=Connie
+TARGET_3_LABEL=Connie
+TARGET_3_SPEECH=Hello Connie.

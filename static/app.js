@@ -1,15 +1,6 @@
 const $ = (id) => document.getElementById(id);
 
-const CONFIDENCE_THRESHOLD = 0.85;
-const REQUIRED_STABLE_MS = 600;
-const REARM_MS = 900;
-
-const TARGETS = {
-  pen: { label: "Pen", speech: "This is a pen." },
-  helicea: { label: "Helicea", speech: "Hello Helicea." },
-  connie: { label: "Connie", speech: "Hello Connie." },
-};
-
+let settings;
 let model;
 let webcam;
 let running = false;
@@ -43,20 +34,46 @@ function normalizeModelBase(value) {
 }
 
 function classToTarget(className) {
-  const text = className.trim().toLowerCase();
-  if (/\bpen\b/.test(text)) return "pen";
-  if (text.includes("helicea")) return "helicea";
-  if (text.includes("connie")) return "connie";
-  return null;
+  const normalized = className.trim().toLowerCase();
+  return settings.targets.find((target) => normalized === target.className.trim().toLowerCase()) || null;
 }
 
 function speak(text) {
   if (!("speechSynthesis" in window)) throw new Error("Text-to-speech is not supported by this browser.");
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "en-US";
-  utterance.rate = 1;
+  utterance.lang = settings.speechLanguage;
+  utterance.rate = settings.speechRate;
   window.speechSynthesis.speak(utterance);
+}
+
+function renderTasks() {
+  $("task-list").replaceChildren(...settings.targets.map((target) => {
+    const item = document.createElement("li");
+    item.dataset.target = target.id;
+    const check = document.createElement("span");
+    check.textContent = "\u2713";
+    const details = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = `Detect ${target.label}`;
+    const speech = document.createElement("small");
+    speech.textContent = `\u201c${target.speech}\u201d`;
+    details.append(title, speech);
+    item.append(check, details);
+    return item;
+  }));
+}
+
+async function loadSettings() {
+  const response = await fetch("/api/config", { cache: "no-store" });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Could not load config.txt");
+  settings = data;
+  $("model-url").value = settings.modelUrl;
+  renderTasks();
+  $("completed-count").textContent = `0 / ${settings.targets.length}`;
+  $("reset").disabled = false;
+  log("Settings loaded from config.txt", settings);
 }
 
 function elapsedSeconds() {
@@ -74,7 +91,7 @@ function resetCompetition() {
   lastTriggeredTarget = null;
   competitionStartedAt = running ? performance.now() : 0;
   document.querySelectorAll("[data-target]").forEach((item) => item.classList.remove("complete"));
-  $("completed-count").textContent = "0 / 3";
+  $("completed-count").textContent = `0 / ${settings.targets.length}`;
   $("last-message").textContent = "No message played yet.";
   $("meter-fill").style.width = "0%";
   clearInterval(timerId);
@@ -85,15 +102,18 @@ function resetCompetition() {
 async function start() {
   if (running) return;
   $("start").disabled = true;
-  $("status").textContent = "Loading image model…";
+  $("status").textContent = "Loading image model...";
   try {
+    await loadSettings();
     if (!window.tf || !window.tmImage) throw new Error("Recognition libraries did not load. Check the internet connection.");
     const base = normalizeModelBase($("model-url").value);
     model = await tmImage.load(`${base}model.json`, `${base}metadata.json`);
     const labels = model.getClassLabels();
-    const recognizedLabels = labels.map(classToTarget).filter(Boolean);
-    if (!["pen", "helicea", "connie"].every((target) => recognizedLabels.includes(target))) {
-      throw new Error(`The model needs Pen, Helicea, and Connie classes. Found: ${labels.join(", ")}`);
+    const missing = settings.targets.filter((target) => !labels.some(
+      (label) => label.trim().toLowerCase() === target.className.trim().toLowerCase(),
+    ));
+    if (missing.length) {
+      throw new Error(`Model is missing classes: ${missing.map((target) => target.className).join(", ")}. Found: ${labels.join(", ")}`);
     }
 
     webcam = new tmImage.Webcam(420, 420, true);
@@ -102,7 +122,7 @@ async function start() {
     $("webcam").replaceChildren(webcam.canvas);
     running = true;
     resetCompetition();
-    $("status").textContent = "Ready — show a pen, Helicea, or Connie to the camera.";
+    $("status").textContent = `Ready - show ${settings.targets.map((target) => target.label).join(", ")} to the camera.`;
     log("Competition started", { classes: labels });
     requestAnimationFrame(loop);
   } catch (error) {
@@ -120,18 +140,17 @@ async function loop(now) {
     const predictions = await model.predict(webcam.canvas);
     const best = predictions.reduce((a, b) => a.probability > b.probability ? a : b);
     const target = classToTarget(best.className);
-
-    $("detected-target").textContent = target ? TARGETS[target].label : best.className;
+    $("detected-target").textContent = target ? target.label : best.className;
     $("confidence").textContent = `${Math.round(best.probability * 100)}%`;
 
-    if (target && best.probability >= CONFIDENCE_THRESHOLD) {
+    if (target && best.probability >= settings.confidenceThreshold) {
       lastTargetSeenAt = now;
-      if (target !== lastTriggeredTarget) {
-        if (candidate !== target) {
-          candidate = target;
+      if (target.id !== lastTriggeredTarget) {
+        if (candidate !== target.id) {
+          candidate = target.id;
           candidateSince = now;
         }
-        const progress = Math.min(1, (now - candidateSince) / REQUIRED_STABLE_MS);
+        const progress = Math.min(1, (now - candidateSince) / settings.requiredStableMs);
         $("meter-fill").style.width = `${progress * 100}%`;
         if (progress >= 1) triggerTarget(target);
       } else {
@@ -141,7 +160,7 @@ async function loop(now) {
       candidate = null;
       candidateSince = 0;
       $("meter-fill").style.width = "0%";
-      if (now - lastTargetSeenAt >= REARM_MS) lastTriggeredTarget = null;
+      if (now - lastTargetSeenAt >= settings.rearmMs) lastTriggeredTarget = null;
     }
   } catch (error) {
     running = false;
@@ -154,17 +173,16 @@ async function loop(now) {
 }
 
 function triggerTarget(target) {
-  const config = TARGETS[target];
-  lastTriggeredTarget = target;
+  lastTriggeredTarget = target.id;
   candidate = null;
-  speak(config.speech);
-  completed.add(target);
-  document.querySelector(`[data-target="${target}"]`).classList.add("complete");
-  $("completed-count").textContent = `${completed.size} / 3`;
-  $("last-message").textContent = config.speech;
-  log("Target detected", { target: config.label, speech: config.speech });
+  speak(target.speech);
+  completed.add(target.id);
+  document.querySelector(`[data-target="${target.id}"]`).classList.add("complete");
+  $("completed-count").textContent = `${completed.size} / ${settings.targets.length}`;
+  $("last-message").textContent = target.speech;
+  log("Target detected", { target: target.label, speech: target.speech });
 
-  if (completed.size === 3) {
+  if (completed.size === settings.targets.length) {
     clearInterval(timerId);
     updateTimer();
     $("status").textContent = `Completed all tasks in ${elapsedSeconds().toFixed(1)} seconds!`;
@@ -184,4 +202,10 @@ $("copy-log").addEventListener("click", async () => {
 
 window.addEventListener("error", (event) => log("Browser error", event.message));
 window.addEventListener("unhandledrejection", (event) => log("Unhandled rejection", errorMessage(event.reason)));
-log("Page ready");
+loadSettings().then(() => {
+  $("status").textContent = "Settings loaded. Waiting to start.";
+}).catch((error) => {
+  $("status").textContent = `Configuration error: ${errorMessage(error)}`;
+  $("start").disabled = true;
+  log("Configuration failed", errorMessage(error));
+});

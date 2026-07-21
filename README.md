@@ -24,3 +24,14 @@ python app.py
 Open <http://127.0.0.1:5000> and select **Start competition**. The app requires at least 85% confidence held for 0.6 seconds. A target must leave the camera briefly before the same announcement can play again. The timer stops when all three tasks are complete.
 
 Speech uses the Web Speech API directly in the browser, so no audio files or extra Python text-to-speech dependency is required.
+
+## Customize without editing code
+
+Open `config.txt`, change the values after `=`, save, and refresh the browser. It controls:
+
+- Optional default Teachable Machine model URL
+- Confidence threshold and detection timing
+- Text-to-speech language and speed
+- All three model class names, display labels, and spoken messages
+
+Keep the `KEY=` names unchanged. The app displays a configuration error if a value is missing or invalid.

@@ -27,7 +27,7 @@ Before clicking **Start detection**, users can adjust **Minimum confidence** and
 
 Use **Detection camera** to choose among connected cameras. If camera names are hidden, click **Find cameras** and allow permission; the temporary permission stream closes immediately after the list is loaded. Stop detection before switching cameras.
 
-Each run contains exactly five detection attempts. Users can edit the pause between attempts and the time limit for each attempt on the webpage. A timed-out attempt is recorded as **No detection**, and all five results appear in the on-page attempt log while the original task checklist remains visible.
+Each run contains exactly five detection attempts. Users can edit the pause between attempts and the time limit for each attempt on the webpage. A timed-out attempt is recorded as **No detection**, and all five results appear in the on-page attempt log while the original task checklist remains visible. Each log time is the duration of that individual attempt, not the cumulative competition time.
 
 Speech uses the Web Speech API directly in the browser, so no audio files or extra Python text-to-speech dependency is required.
 

@@ -80,7 +80,7 @@ function renderAttemptLog() {
     number.textContent = `Attempt ${index + 1}`;
     if (result) {
       outcome.textContent = result.label;
-      time.textContent = `${result.at.toFixed(1)}s`;
+      time.textContent = `${result.duration.toFixed(1)}s`;
       if (!result.targetId) item.classList.add("no-detection");
     } else {
       item.classList.add("pending");
@@ -163,8 +163,12 @@ function updateTimer() {
   const elapsed = elapsedSeconds();
   $("time").textContent = `${elapsed.toFixed(1)}s`;
   if (!competitionFinished && settings.winTimeLimitSeconds > 0 && elapsed >= settings.winTimeLimitSeconds) {
+    let remainingAttemptDuration = attemptActive
+      ? Math.max(0, (performance.now() - attemptStartedAt) / 1000)
+      : 0;
     while (attempts.length < MAX_ATTEMPTS) {
-      attempts.push({ targetId: null, label: "No detection", at: elapsed });
+      attempts.push({ targetId: null, label: "No detection", duration: remainingAttemptDuration });
+      remainingAttemptDuration = 0;
     }
     renderAttemptLog();
     finishCompetition(false);
@@ -367,7 +371,7 @@ function recordAttempt(target, now) {
   const result = {
     targetId: target?.id || null,
     label: target?.label || "No detection",
-    at: (now - competitionStartedAt) / 1000,
+    duration: Math.max(0, (now - attemptStartedAt) / 1000),
   };
   attempts.push(result);
   renderAttemptLog();

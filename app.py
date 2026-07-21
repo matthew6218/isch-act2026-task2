@@ -55,6 +55,7 @@ def read_config() -> dict:
         "detectionTimeoutSeconds": detection_timeout,
         "speechLanguage": values.get("SPEECH_LANGUAGE", "en-US"),
         "speechRate": speech_rate,
+        "noDetectionSpeech": values.get("NO_DETECTION_SPEECH", "").strip() or "No detection.",
         "winRequiredTargets": required_targets,
         "winTimeLimitSeconds": time_limit,
         "winMessage": values.get("WIN_MESSAGE", "You win! Completed the challenge in {time} seconds."),

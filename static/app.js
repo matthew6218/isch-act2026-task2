@@ -163,6 +163,7 @@ function updateTimer() {
   const elapsed = elapsedSeconds();
   $("time").textContent = `${elapsed.toFixed(1)}s`;
   if (!competitionFinished && settings.winTimeLimitSeconds > 0 && elapsed >= settings.winTimeLimitSeconds) {
+    speak(settings.noDetectionSpeech);
     let remainingAttemptDuration = attemptActive
       ? Math.max(0, (performance.now() - attemptStartedAt) / 1000)
       : 0;
@@ -374,6 +375,10 @@ function recordAttempt(target, now) {
     duration: Math.max(0, (now - attemptStartedAt) / 1000),
   };
   attempts.push(result);
+  if (!target) {
+    speak(settings.noDetectionSpeech);
+    $("last-message").textContent = settings.noDetectionSpeech;
+  }
   renderAttemptLog();
   log(`Attempt ${attempts.length} recorded`, result);
 

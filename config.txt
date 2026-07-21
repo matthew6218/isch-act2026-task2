@@ -57,6 +57,9 @@ SPEECH_LANGUAGE=en-US
 # Speech speed: 1.0 is normal, 0.8 is slower, 1.2 is faster.
 SPEECH_RATE=1.0
 
+# Spoken when an attempt reaches its time limit without a correct result.
+NO_DETECTION_SPEECH=No detection.
+
 # --- TARGET 1 ----------------------------------------------------
 # CLASS must exactly match its class name in Teachable Machine.
 # LABEL is the friendly name displayed on screen.

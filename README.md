@@ -29,6 +29,8 @@ Use **Detection camera** to choose among connected cameras. If camera names are 
 
 Each run contains exactly five detection attempts. Users can edit the pause between attempts and the time limit for each attempt on the webpage. A timed-out attempt is recorded as **No detection**, and all five results appear in the on-page attempt log while the original task checklist remains visible. Each log time is the duration of that individual attempt, not the cumulative competition time.
 
+The overall competition timer counts pause periods at half weight. For example, a 10-second pause adds only 5 seconds to the displayed competition time. Active detection time still counts normally.
+
 Timed-out attempts also use text-to-speech. Edit `NO_DETECTION_SPEECH` in `config.txt` to change the default “No detection.” announcement.
 
 Speech uses the Web Speech API directly in the browser, so no audio files or extra Python text-to-speech dependency is required.

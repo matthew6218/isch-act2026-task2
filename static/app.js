@@ -1,5 +1,6 @@
 const $ = (id) => document.getElementById(id);
 const MAX_ATTEMPTS = 5;
+const PAUSE_TIMER_WEIGHT = 0.5;
 
 let settings;
 let model;
@@ -15,6 +16,8 @@ let timerId = null;
 let attempts = [];
 let attemptStartedAt = 0;
 let pauseUntil = 0;
+let pauseStartedAt = 0;
+let completedPauseMs = 0;
 let attemptActive = false;
 const completed = new Set();
 
@@ -156,7 +159,14 @@ async function refreshCameraList(requestPermission = false) {
 }
 
 function elapsedSeconds() {
-  return competitionStartedAt ? (performance.now() - competitionStartedAt) / 1000 : 0;
+  if (!competitionStartedAt) return 0;
+  const now = performance.now();
+  const currentPauseMs = pauseStartedAt
+    ? Math.max(0, Math.min(now, pauseUntil) - pauseStartedAt)
+    : 0;
+  const realElapsedMs = now - competitionStartedAt;
+  const pauseDiscountMs = (completedPauseMs + currentPauseMs) * (1 - PAUSE_TIMER_WEIGHT);
+  return Math.max(0, realElapsedMs - pauseDiscountMs) / 1000;
 }
 
 function updateTimer() {
@@ -186,6 +196,8 @@ function resetCompetition() {
   competitionStartedAt = running ? performance.now() : 0;
   attemptStartedAt = competitionStartedAt;
   pauseUntil = 0;
+  pauseStartedAt = 0;
+  completedPauseMs = 0;
   attemptActive = running;
   document.querySelectorAll("[data-target]").forEach((item) => item.classList.remove("complete"));
   $("completed-count").textContent = `0 / ${settings.winRequiredTargets}`;
@@ -353,9 +365,13 @@ function triggerTarget(target) {
 }
 
 function startNextAttempt(now) {
+  if (pauseStartedAt) {
+    completedPauseMs += Math.max(0, Math.min(now, pauseUntil) - pauseStartedAt);
+  }
   attemptActive = true;
   attemptStartedAt = now;
   pauseUntil = 0;
+  pauseStartedAt = 0;
   candidate = null;
   candidateSince = 0;
   lastTriggeredTarget = null;
@@ -386,6 +402,7 @@ function recordAttempt(target, now) {
     finishCompetition(completed.size >= settings.winRequiredTargets);
     return;
   }
+  pauseStartedAt = now;
   pauseUntil = now + settings.pauseBetweenDetectionsMs;
   if (settings.pauseBetweenDetectionsMs === 0) startNextAttempt(now);
 }

@@ -1,39 +1,26 @@
-# Image Rock Paper Scissors
+# AI Detection Mini Competition
 
-A Python/Flask game whose webcam recognition runs in the browser using a Google
-Teachable Machine TensorFlow.js image model.
+A Flask web app that uses a Teachable Machine image model to detect three targets and the browser's built-in text-to-speech to announce them:
 
-## Train and export the model
+- `Pen` → “This is a pen.”
+- `Helicea` → “Hello Helicea.”
+- `Connie` → “Hello Connie.”
 
-1. Create an **Image Project** in Teachable Machine.
-2. Name the three classes `Rock`, `Paper`, and `Scissors` (capitalization does
-   not matter). Capture varied examples and train the model.
-3. Choose **Export Model → TensorFlow.js**.
-4. Either upload/share the model and copy its URL, or download it and copy all
-   exported files into `static/model/`.
+## Prepare the model
 
-The app is preconfigured to use
-`https://teachablemachine.withgoogle.com/models/UYVP_XDRN/`.
+1. Create an Image Project in Teachable Machine.
+2. Train classes named `Pen`, `Helicea`, and `Connie` (capitalization does not matter). Add varied angles, lighting, distance, and backgrounds to improve accuracy.
+3. Export as TensorFlow.js.
+4. Download the files into `static/model/`, or paste the model's shared URL into the app.
 
 ## Run
 
 ```powershell
-py -m venv .venv
 .venv\Scripts\Activate.ps1
-py -m pip install -r requirements.txt
-py app.py
+python -m pip install -r requirements.txt
+python app.py
 ```
 
-Open <http://127.0.0.1:5000>, enter the model URL (or leave the local default),
-and click **Start camera**. Allow camera access when prompted.
+Open <http://127.0.0.1:5000> and select **Start competition**. The app requires at least 85% confidence held for 0.6 seconds. A target must leave the camera briefly before the same announcement can play again. The timer stops when all three tasks are complete.
 
-The app requires a move to stay above 85% confidence for 1.2 seconds, then
-starts a 1.8-second cooldown so one hand sign does not trigger many rounds.
-These values can be changed at the top of `static/app.js`.
-
-## Important
-
-This is still a Python program: Python serves the app, chooses the computer's
-move, decides the winner, and tracks score. TensorFlow.js runs only the exported
-image model because that is the runtime format supplied by Teachable Machine.
-The CDN scripts require an internet connection; the trained model can be local.
+Speech uses the Web Speech API directly in the browser, so no audio files or extra Python text-to-speech dependency is required.

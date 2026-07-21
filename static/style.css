@@ -35,6 +35,19 @@ small, #status { color: var(--muted); }
 .meter { height: 7px; overflow: hidden; border-radius: 10px; background: #303038; }
 #meter-fill { height: 100%; width: 0; transition: width .08s linear; background: var(--accent); }
 .result { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; }
+.competition-stats { display: flex; justify-content: space-around; width: 100%; gap: 24px; }
+.competition-stats div { display: flex; flex-direction: column; }
+.competition-stats strong { font-size: 2.5rem; color: var(--accent); }
+.competition-stats span { color: var(--muted); }
+.task-list { width: 100%; margin: 28px 0; }
+.task-list li { display: flex; align-items: center; gap: 14px; padding: 14px 0; text-align: left; opacity: .55; }
+.task-list li > span { display: grid; place-items: center; width: 30px; height: 30px; flex: 0 0 30px; border: 2px solid var(--line); border-radius: 50%; color: transparent; }
+.task-list li div { display: flex; flex-direction: column; gap: 4px; }
+.task-list li.complete { opacity: 1; }
+.task-list li.complete > span { color: #111; border-color: #56dc88; background: #56dc88; }
+.task-list small { color: var(--muted); }
+.last-spoken { min-height: 48px; }
+.last-spoken strong { color: var(--accent); }
 .score { display: flex; align-items: center; gap: 24px; }
 .score div { display: flex; flex-direction: column; }
 .score strong { font-size: 3.8rem; }

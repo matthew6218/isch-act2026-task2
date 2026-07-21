@@ -3,37 +3,33 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Image RPS</title>
+  <title>AI Detection Mini Competition</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.4/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
 </head>
 <body>
   <div class="brand-logos" aria-label="Partner logos">
-    <div class="logo-tile is-tile">
-      <img src="{{ url_for('logos', filename='4C-IS-logo.webp') }}" alt="School of Innovation">
-    </div>
+    <div class="logo-tile is-tile"><img src="{{ url_for('logos', filename='4C-IS-logo.webp') }}" alt="School of Innovation"></div>
     <span aria-hidden="true"></span>
-    <div class="logo-tile hku-tile">
-      <img src="{{ url_for('logos', filename='HKU-Aca-Logo-White-RGB.webp') }}" alt="HKU Academy for the Talented">
-    </div>
+    <div class="logo-tile hku-tile"><img src="{{ url_for('logos', filename='HKU-Aca-Logo-White-RGB.webp') }}" alt="HKU Academy for the Talented"></div>
   </div>
   <main>
     <header>
-      <p class="eyebrow">TEACHABLE MACHINE + PYTHON</p>
-      <h1>Rock Paper Scissors</h1>
-      <p>Show your hand sign to the camera until the countdown completes.</p>
+      <p class="eyebrow">TEACHABLE MACHINE + TEXT TO SPEECH</p>
+      <h1>Mini Competition</h1>
+      <p>Complete all three detection tasks accurately, then compare your time.</p>
     </header>
 
     <section class="setup card">
-      <label for="model-url">Model location</label>
+      <label for="model-url">Teachable Machine model location</label>
       <div class="url-row">
-        <input id="model-url" value="https://teachablemachine.withgoogle.com/models/UYVP_XDRN/" placeholder="https://teachablemachine.withgoogle.com/models/xxxxx/">
-        <button id="start">Start camera</button>
+        <input id="model-url" value="" placeholder="https://teachablemachine.withgoogle.com/models/xxxxx/">
+        <button id="start">Start competition</button>
       </div>
-      <small>Use a shared Teachable Machine image-model URL, or put exported files in <code>static/model/</code>.</small>
+      <small>Train classes named <code>Pen</code>, <code>Helicea</code>, and <code>Connie</code>. Paste the shared model URL or export it to <code>static/model/</code>.</small>
       <p id="status" role="status">Waiting to start.</p>
-      <details class="diagnostics" open>
+      <details class="diagnostics">
         <summary>Diagnostic log</summary>
         <pre id="debug-log" aria-live="polite"></pre>
         <button id="copy-log" class="secondary" type="button">Copy log</button>
@@ -42,37 +38,30 @@
 
     <section class="arena">
       <div class="camera card">
-        <div id="webcam"></div>
+        <div id="webcam"><p>Camera preview</p></div>
         <div class="detected">
           <span>Detected</span>
-          <strong id="detected-move">—</strong>
+          <strong id="detected-target">—</strong>
           <span id="confidence">0%</span>
         </div>
         <div class="meter"><div id="meter-fill"></div></div>
       </div>
 
       <div class="result card">
-        <div class="score">
-          <div><strong id="player-score">0</strong><span>You</span></div>
-          <b>:</b>
-          <div><strong id="computer-score">0</strong><span>Computer</span></div>
+        <div class="competition-stats">
+          <div><strong id="completed-count">0 / 3</strong><span>Tasks</span></div>
+          <div><strong id="time">0.0s</strong><span>Time</span></div>
         </div>
-        <div class="versus">
-          <div><span>You played</span><strong id="player-move">?</strong></div>
-          <b>VS</b>
-          <div><span>Computer</span><strong id="computer-move">?</strong></div>
-        </div>
-        <h2 id="outcome">Show your move!</h2>
-        <p>Draws: <span id="draws">0</span> · Round: <span id="round">0</span></p>
-        <button id="reset" class="secondary">Reset score</button>
+        <ul class="task-list">
+          <li data-target="pen"><span>✓</span><div><strong>Detect a pen</strong><small>“This is a pen.”</small></div></li>
+          <li data-target="helicea"><span>✓</span><div><strong>Detect Helicea</strong><small>“Hello Helicea.”</small></div></li>
+          <li data-target="connie"><span>✓</span><div><strong>Detect Connie</strong><small>“Hello Connie.”</small></div></li>
+        </ul>
+        <p class="last-spoken">Last speech: <strong id="last-message">No message played yet.</strong></p>
+        <button id="reset" class="secondary">Reset competition</button>
       </div>
     </section>
-
-    <section class="card history-card">
-      <h2>Recent rounds</h2>
-      <ol id="history"><li>No rounds yet.</li></ol>
-    </section>
   </main>
-  <script src="{{ url_for('static', filename='app.js') }}?v=3"></script>
+  <script src="{{ url_for('static', filename='app.js') }}?v=4"></script>
 </body>
 </html>

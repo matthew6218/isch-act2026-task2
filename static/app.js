@@ -1,49 +1,85 @@
 const $ = (id) => document.getElementById(id);
-const MOVES = ["rock", "paper", "scissors"];
-const EMOJI = { rock: "✊", paper: "✋", scissors: "✌️" };
-const REQUIRED_STABLE_MS = 1200;
+
 const CONFIDENCE_THRESHOLD = 0.85;
-const ROUND_COOLDOWN_MS = 1800;
+const REQUIRED_STABLE_MS = 600;
+const REARM_MS = 900;
+
+const TARGETS = {
+  pen: { label: "Pen", speech: "This is a pen." },
+  helicea: { label: "Helicea", speech: "Hello Helicea." },
+  connie: { label: "Connie", speech: "Hello Connie." },
+};
 
 let model;
 let webcam;
 let running = false;
 let candidate = null;
 let candidateSince = 0;
-let cooldownUntil = 0;
-let lastPredictionLog = 0;
+let lastTriggeredTarget = null;
+let lastTargetSeenAt = 0;
+let competitionStartedAt = 0;
+let timerId = null;
+const completed = new Set();
 
 function errorMessage(error) {
-  if (error instanceof Error) return `${error.name}: ${error.message}`;
-  return String(error);
+  return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
 }
 
 function log(message, details) {
   const time = new Date().toLocaleTimeString();
   const suffix = details === undefined ? "" : ` | ${typeof details === "string" ? details : JSON.stringify(details)}`;
-  const line = `[${time}] ${message}${suffix}`;
-  console.log(`[RPS] ${message}`, details ?? "");
   const output = $("debug-log");
+  console.log(`[Detector] ${message}`, details ?? "");
   if (output) {
-    output.textContent += `${line}\n`;
+    output.textContent += `[${time}] ${message}${suffix}\n`;
     output.scrollTop = output.scrollHeight;
   }
 }
 
-window.addEventListener("error", (event) => log("Browser error", `${event.message} (${event.filename}:${event.lineno})`));
-window.addEventListener("unhandledrejection", (event) => log("Unhandled promise rejection", errorMessage(event.reason)));
-
 function normalizeModelBase(value) {
   const trimmed = value.trim();
+  if (!trimmed) throw new Error("Enter a Teachable Machine model URL first.");
   return trimmed.endsWith("/") ? trimmed : `${trimmed}/`;
 }
 
-function classToMove(className) {
+function classToTarget(className) {
   const text = className.trim().toLowerCase();
-  if (text.includes("scissor")) return "scissors";
-  if (text.includes("rock")) return "rock";
-  if (text.includes("paper")) return "paper";
+  if (/\bpen\b/.test(text)) return "pen";
+  if (text.includes("helicea")) return "helicea";
+  if (text.includes("connie")) return "connie";
   return null;
+}
+
+function speak(text) {
+  if (!("speechSynthesis" in window)) throw new Error("Text-to-speech is not supported by this browser.");
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-US";
+  utterance.rate = 1;
+  window.speechSynthesis.speak(utterance);
+}
+
+function elapsedSeconds() {
+  return competitionStartedAt ? (performance.now() - competitionStartedAt) / 1000 : 0;
+}
+
+function updateTimer() {
+  $("time").textContent = `${elapsedSeconds().toFixed(1)}s`;
+}
+
+function resetCompetition() {
+  completed.clear();
+  candidate = null;
+  candidateSince = 0;
+  lastTriggeredTarget = null;
+  competitionStartedAt = running ? performance.now() : 0;
+  document.querySelectorAll("[data-target]").forEach((item) => item.classList.remove("complete"));
+  $("completed-count").textContent = "0 / 3";
+  $("last-message").textContent = "No message played yet.";
+  $("meter-fill").style.width = "0%";
+  clearInterval(timerId);
+  timerId = running ? setInterval(updateTimer, 100) : null;
+  updateTimer();
 }
 
 async function start() {
@@ -51,32 +87,29 @@ async function start() {
   $("start").disabled = true;
   $("status").textContent = "Loading image model…";
   try {
+    if (!window.tf || !window.tmImage) throw new Error("Recognition libraries did not load. Check the internet connection.");
     const base = normalizeModelBase($("model-url").value);
-    log("Start requested", { modelBase: base, secureContext: window.isSecureContext });
-    if (!window.tf) throw new Error("TensorFlow.js did not load. Check the CDN connection or an ad blocker.");
-    if (!window.tmImage) throw new Error("Teachable Machine Image library did not load. Check the CDN connection or an ad blocker.");
-    log("Libraries ready", { tfjs: tf.version.tfjs, tmImage: typeof tmImage.load });
-
-    log("Downloading model.json and metadata.json");
     model = await tmImage.load(`${base}model.json`, `${base}metadata.json`);
-    log("Model loaded", { classes: model.getClassLabels(), totalClasses: model.getTotalClasses() });
+    const labels = model.getClassLabels();
+    const recognizedLabels = labels.map(classToTarget).filter(Boolean);
+    if (!["pen", "helicea", "connie"].every((target) => recognizedLabels.includes(target))) {
+      throw new Error(`The model needs Pen, Helicea, and Connie classes. Found: ${labels.join(", ")}`);
+    }
 
     webcam = new tmImage.Webcam(420, 420, true);
-    log("Requesting camera permission");
     await webcam.setup();
-    log("Camera permission granted");
     await webcam.play();
-    log("Webcam stream started", { width: webcam.canvas.width, height: webcam.canvas.height });
     $("webcam").replaceChildren(webcam.canvas);
     running = true;
-    $("status").textContent = "Camera ready. Hold up rock, paper, or scissors.";
+    resetCompetition();
+    $("status").textContent = "Ready — show a pen, Helicea, or Connie to the camera.";
+    log("Competition started", { classes: labels });
     requestAnimationFrame(loop);
   } catch (error) {
-    console.error(error);
     const message = errorMessage(error);
-    log("Start failed", message);
     $("status").textContent = `Could not start: ${message}`;
     $("start").disabled = false;
+    log("Start failed", message);
   }
 }
 
@@ -86,86 +119,60 @@ async function loop(now) {
     webcam.update();
     const predictions = await model.predict(webcam.canvas);
     const best = predictions.reduce((a, b) => a.probability > b.probability ? a : b);
-    const move = classToMove(best.className);
+    const target = classToTarget(best.className);
 
-    if (now - lastPredictionLog >= 3000) {
-      log("Prediction running", predictions.map(({ className, probability }) => ({
-        className,
-        confidence: `${Math.round(probability * 100)}%`,
-      })));
-      lastPredictionLog = now;
-    }
-
-    $("detected-move").textContent = move ? `${EMOJI[move]} ${move}` : best.className;
+    $("detected-target").textContent = target ? TARGETS[target].label : best.className;
     $("confidence").textContent = `${Math.round(best.probability * 100)}%`;
 
-    if (move && best.probability >= CONFIDENCE_THRESHOLD && now >= cooldownUntil) {
-      if (candidate !== move) {
-        candidate = move;
-        candidateSince = now;
+    if (target && best.probability >= CONFIDENCE_THRESHOLD) {
+      lastTargetSeenAt = now;
+      if (target !== lastTriggeredTarget) {
+        if (candidate !== target) {
+          candidate = target;
+          candidateSince = now;
+        }
+        const progress = Math.min(1, (now - candidateSince) / REQUIRED_STABLE_MS);
+        $("meter-fill").style.width = `${progress * 100}%`;
+        if (progress >= 1) triggerTarget(target);
+      } else {
+        $("meter-fill").style.width = "100%";
       }
-      const progress = Math.min(1, (now - candidateSince) / REQUIRED_STABLE_MS);
-      $("meter-fill").style.width = `${progress * 100}%`;
-      if (progress >= 1) await playRound(move, now);
     } else {
       candidate = null;
       candidateSince = 0;
       $("meter-fill").style.width = "0%";
+      if (now - lastTargetSeenAt >= REARM_MS) lastTriggeredTarget = null;
     }
   } catch (error) {
     running = false;
-    const message = errorMessage(error);
-    log("Prediction loop failed", message);
-    $("status").textContent = `Prediction failed: ${message}`;
+    clearInterval(timerId);
+    $("status").textContent = `Prediction failed: ${errorMessage(error)}`;
     $("start").disabled = false;
     return;
   }
   requestAnimationFrame(loop);
 }
 
-async function playRound(move, now) {
-  cooldownUntil = now + ROUND_COOLDOWN_MS;
+function triggerTarget(target) {
+  const config = TARGETS[target];
+  lastTriggeredTarget = target;
   candidate = null;
-  $("meter-fill").style.width = "0%";
-  try {
-    const response = await fetch("/api/play", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ move }),
-    });
-    if (!response.ok) throw new Error(await response.text());
-    render(await response.json());
-  } catch (error) {
-    $("status").textContent = `Round failed: ${error.message}`;
-  }
-}
+  speak(config.speech);
+  completed.add(target);
+  document.querySelector(`[data-target="${target}"]`).classList.add("complete");
+  $("completed-count").textContent = `${completed.size} / 3`;
+  $("last-message").textContent = config.speech;
+  log("Target detected", { target: config.label, speech: config.speech });
 
-function render(state) {
-  $("player-score").textContent = state.playerScore;
-  $("computer-score").textContent = state.computerScore;
-  $("draws").textContent = state.draws;
-  $("round").textContent = state.roundNumber;
-  if (state.playerMove) {
-    $("player-move").textContent = EMOJI[state.playerMove];
-    $("computer-move").textContent = EMOJI[state.computerMove];
-    $("outcome").textContent = { win: "You win!", lose: "Computer wins!", draw: "It's a draw!" }[state.outcome];
+  if (completed.size === 3) {
+    clearInterval(timerId);
+    updateTimer();
+    $("status").textContent = `Completed all tasks in ${elapsedSeconds().toFixed(1)} seconds!`;
   }
-  const history = state.history || [];
-  $("history").innerHTML = history.length ? history.map(item =>
-    `<li><span>Round ${item.round}</span><strong>${EMOJI[item.playerMove]} vs ${EMOJI[item.computerMove]}</strong><em>${item.outcome}</em></li>`
-  ).join("") : "<li>No rounds yet.</li>";
-}
-
-async function reset() {
-  const response = await fetch("/api/reset", { method: "POST" });
-  render(await response.json());
-  $("player-move").textContent = "?";
-  $("computer-move").textContent = "?";
-  $("outcome").textContent = "Show your move!";
 }
 
 $("start").addEventListener("click", start);
-$("reset").addEventListener("click", reset);
+$("reset").addEventListener("click", resetCompetition);
 $("copy-log").addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText($("debug-log").textContent);
@@ -175,9 +182,6 @@ $("copy-log").addEventListener("click", async () => {
   }
 });
 
-log("Page script initialized", {
-  secureContext: window.isSecureContext,
-  tfLoaded: Boolean(window.tf),
-  tmImageLoaded: Boolean(window.tmImage),
-});
-fetch("/api/state").then(r => r.json()).then(render).catch(error => log("State request failed", errorMessage(error)));
+window.addEventListener("error", (event) => log("Browser error", event.message));
+window.addEventListener("unhandledrejection", (event) => log("Unhandled rejection", errorMessage(event.reason)));
+log("Page ready");

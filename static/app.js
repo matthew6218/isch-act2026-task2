@@ -9,6 +9,7 @@ let candidateSince = 0;
 let lastTriggeredTarget = null;
 let lastTargetSeenAt = 0;
 let competitionStartedAt = 0;
+let competitionFinished = false;
 let timerId = null;
 const completed = new Set();
 
@@ -71,7 +72,7 @@ async function loadSettings() {
   settings = data;
   $("model-url").value = settings.modelUrl;
   renderTasks();
-  $("completed-count").textContent = `0 / ${settings.targets.length}`;
+  $("completed-count").textContent = `0 / ${settings.winRequiredTargets}`;
   $("reset").disabled = false;
   log("Settings loaded from config.txt", settings);
 }
@@ -81,7 +82,11 @@ function elapsedSeconds() {
 }
 
 function updateTimer() {
-  $("time").textContent = `${elapsedSeconds().toFixed(1)}s`;
+  const elapsed = elapsedSeconds();
+  $("time").textContent = `${elapsed.toFixed(1)}s`;
+  if (!competitionFinished && settings.winTimeLimitSeconds > 0 && elapsed >= settings.winTimeLimitSeconds) {
+    finishCompetition(false);
+  }
 }
 
 function resetCompetition() {
@@ -89,11 +94,14 @@ function resetCompetition() {
   candidate = null;
   candidateSince = 0;
   lastTriggeredTarget = null;
+  competitionFinished = false;
   competitionStartedAt = running ? performance.now() : 0;
   document.querySelectorAll("[data-target]").forEach((item) => item.classList.remove("complete"));
-  $("completed-count").textContent = `0 / ${settings.targets.length}`;
+  $("completed-count").textContent = `0 / ${settings.winRequiredTargets}`;
   $("last-message").textContent = "No message played yet.";
   $("meter-fill").style.width = "0%";
+  $("status").classList.remove("win", "lose");
+  if (running) $("status").textContent = "Competition reset. Start detecting targets.";
   clearInterval(timerId);
   timerId = running ? setInterval(updateTimer, 100) : null;
   updateTimer();
@@ -122,7 +130,10 @@ async function start() {
     $("webcam").replaceChildren(webcam.canvas);
     running = true;
     resetCompetition();
-    $("status").textContent = `Ready - show ${settings.targets.map((target) => target.label).join(", ")} to the camera.`;
+    const timeRule = settings.winTimeLimitSeconds > 0
+      ? ` within ${settings.winTimeLimitSeconds} seconds`
+      : "";
+    $("status").textContent = `Ready - detect ${settings.winRequiredTargets} different target(s)${timeRule}.`;
     log("Competition started", { classes: labels });
     requestAnimationFrame(loop);
   } catch (error) {
@@ -173,20 +184,31 @@ async function loop(now) {
 }
 
 function triggerTarget(target) {
+  if (competitionFinished) return;
   lastTriggeredTarget = target.id;
   candidate = null;
   speak(target.speech);
   completed.add(target.id);
   document.querySelector(`[data-target="${target.id}"]`).classList.add("complete");
-  $("completed-count").textContent = `${completed.size} / ${settings.targets.length}`;
+  $("completed-count").textContent = `${completed.size} / ${settings.winRequiredTargets}`;
   $("last-message").textContent = target.speech;
   log("Target detected", { target: target.label, speech: target.speech });
 
-  if (completed.size === settings.targets.length) {
-    clearInterval(timerId);
-    updateTimer();
-    $("status").textContent = `Completed all tasks in ${elapsedSeconds().toFixed(1)} seconds!`;
-  }
+  if (completed.size >= settings.winRequiredTargets) finishCompetition(true);
+}
+
+function finishCompetition(won) {
+  if (competitionFinished) return;
+  competitionFinished = true;
+  clearInterval(timerId);
+  const time = elapsedSeconds().toFixed(1);
+  $("time").textContent = `${time}s`;
+  $("status").textContent = won
+    ? settings.winMessage.replaceAll("{time}", time)
+    : settings.loseMessage.replaceAll("{time}", time);
+  $("status").classList.toggle("win", won);
+  $("status").classList.toggle("lose", !won);
+  log(won ? "Competition won" : "Competition lost", { time });
 }
 
 $("start").addEventListener("click", start);

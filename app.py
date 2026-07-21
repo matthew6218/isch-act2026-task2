@@ -32,10 +32,16 @@ def read_config() -> dict:
 
     confidence = float(values.get("CONFIDENCE_THRESHOLD", "0.85"))
     speech_rate = float(values.get("SPEECH_RATE", "1.0"))
+    required_targets = int(values.get("WIN_REQUIRED_TARGETS", "3"))
+    time_limit = float(values.get("WIN_TIME_LIMIT_SECONDS", "0"))
     if not 0 < confidence <= 1:
         raise ValueError("CONFIDENCE_THRESHOLD must be greater than 0 and at most 1")
     if not 0.1 <= speech_rate <= 10:
         raise ValueError("SPEECH_RATE must be between 0.1 and 10")
+    if not 1 <= required_targets <= len(targets):
+        raise ValueError(f"WIN_REQUIRED_TARGETS must be between 1 and {len(targets)}")
+    if time_limit < 0:
+        raise ValueError("WIN_TIME_LIMIT_SECONDS cannot be negative")
 
     return {
         "modelUrl": values.get("MODEL_URL", ""),
@@ -44,6 +50,10 @@ def read_config() -> dict:
         "rearmMs": max(0, int(values.get("REARM_MS", "900"))),
         "speechLanguage": values.get("SPEECH_LANGUAGE", "en-US"),
         "speechRate": speech_rate,
+        "winRequiredTargets": required_targets,
+        "winTimeLimitSeconds": time_limit,
+        "winMessage": values.get("WIN_MESSAGE", "You win! Completed the challenge in {time} seconds."),
+        "loseMessage": values.get("LOSE_MESSAGE", "Time is up. Try again!"),
         "targets": targets,
     }
 

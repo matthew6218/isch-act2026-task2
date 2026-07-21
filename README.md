@@ -31,6 +31,7 @@ Open `config.txt`, change the values after `=`, save, and refresh the browser. I
 
 - Optional default Teachable Machine model URL
 - Confidence threshold and detection timing
+- Win condition (required unique targets and optional time limit)
 - Text-to-speech language and speed
 - All three model class names, display labels, and spoken messages
 

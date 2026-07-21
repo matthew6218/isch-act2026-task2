@@ -1,22 +1,68 @@
-# AI Detection Mini Competition settings
-# Edit the values after =, save this file, then refresh the web page.
-# Confidence must be between 0 and 1. Timing values are milliseconds.
+# ================================================================
+# AI DETECTION MINI COMPETITION - TEACHER SETTINGS
+# ================================================================
+# HOW TO EDIT:
+# 1. Change only the text after the = sign. Do not change the KEY names.
+# 2. Save this file.
+# 3. Refresh the browser page before starting the next competition.
+# 4. Do not add quotation marks around words or sentences.
+#
+# Example: to require 90% confidence, use CONFIDENCE_THRESHOLD=0.90
+# Lines beginning with # are comments and do not affect the program.
+
+# --- MODEL -------------------------------------------------------
+# Paste the shared Teachable Machine model URL after the = sign.
+# Leave blank if students should paste the URL on the web page.
 
 MODEL_URL=
+
+# --- DETECTION ACCURACY AND SPEED -------------------------------
+# CONFIDENCE_THRESHOLD: decimal from 0.01 to 1.00.
+# Higher = more accurate but harder to trigger. 0.85 means 85%.
 CONFIDENCE_THRESHOLD=0.85
+
+# REQUIRED_STABLE_MS: how long a prediction must remain confident.
+# 1000 milliseconds = 1 second. Higher values reduce false triggers.
 REQUIRED_STABLE_MS=600
+
+# REARM_MS: how long a target must leave view before it can speak again.
 REARM_MS=900
+
+# --- WIN CONDITION ----------------------------------------------
+# WIN_REQUIRED_TARGETS: number of different targets needed to win.
+# Use 1, 2, or 3. The default 3 requires every target below.
+WIN_REQUIRED_TARGETS=3
+
+# WIN_TIME_LIMIT_SECONDS: maximum time allowed to win.
+# Use 0 for no time limit, or a number such as 30 for 30 seconds.
+WIN_TIME_LIMIT_SECONDS=0
+
+# Messages shown when the group wins or runs out of time.
+# {time} is automatically replaced by the completion time.
+WIN_MESSAGE=You win! Completed the challenge in {time} seconds.
+LOSE_MESSAGE=Time is up. Try again!
+
+# --- TEXT TO SPEECH ---------------------------------------------
+# Common language codes: en-US, en-GB, zh-HK.
 SPEECH_LANGUAGE=en-US
+
+# Speech speed: 1.0 is normal, 0.8 is slower, 1.2 is faster.
 SPEECH_RATE=1.0
 
+# --- TARGET 1 ----------------------------------------------------
+# CLASS must exactly match its class name in Teachable Machine.
+# LABEL is the friendly name displayed on screen.
+# SPEECH is the sentence the browser will read aloud.
 TARGET_1_CLASS=Pen
 TARGET_1_LABEL=Pen
 TARGET_1_SPEECH=This is a pen.
 
+# --- TARGET 2 ----------------------------------------------------
 TARGET_2_CLASS=Helicea
 TARGET_2_LABEL=Helicea
 TARGET_2_SPEECH=Hello Helicea.
 
+# --- TARGET 3 ----------------------------------------------------
 TARGET_3_CLASS=Connie
 TARGET_3_LABEL=Connie
 TARGET_3_SPEECH=Hello Connie.

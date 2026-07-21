@@ -31,6 +31,8 @@ Each run contains exactly five detection attempts. Users can edit the pause betw
 
 The overall competition timer counts pause periods at half weight. For example, a 10-second pause adds only 5 seconds to the displayed competition time. Active detection time still counts normally.
 
+The final result reports two totals separately: the weighted time after the first four main attempts and the weighted time after all five attempts. Attempt five is labelled as the backup attempt and can still help complete the win condition.
+
 Timed-out attempts also use text-to-speech. Edit `NO_DETECTION_SPEECH` in `config.txt` to change the default “No detection.” announcement.
 
 Speech uses the Web Speech API directly in the browser, so no audio files or extra Python text-to-speech dependency is required.

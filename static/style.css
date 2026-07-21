@@ -63,6 +63,11 @@ small, #status { color: var(--muted); }
 .attempt-log li { grid-template-columns: 82px 1fr auto; }
 .attempt-log li.pending { color: var(--muted); }
 .attempt-log li.no-detection strong { color: #ff7777; }
+.final-times { width: 100%; margin-bottom: 18px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #0f0f13; text-align: left; }
+.final-times h2 { margin: 0 0 8px; font-size: 1.05rem; }
+.final-times div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-top: 1px solid var(--line); }
+.final-times span, .final-times small { color: var(--muted); }
+.final-times strong { color: var(--accent); font-size: 1.1rem; }
 .score { display: flex; align-items: center; gap: 24px; }
 .score div { display: flex; flex-direction: column; }
 .score strong { font-size: 3.8rem; }

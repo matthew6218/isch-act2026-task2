@@ -88,11 +88,16 @@
           <h2>Five-attempt log</h2>
           <ol id="attempt-log"></ol>
         </div>
+        <div class="final-times" aria-live="polite">
+          <h2>Final result time cost</h2>
+          <div><span>First 4 attempts</span><strong id="four-attempt-time">--</strong></div>
+          <div><span>All 5 attempts <small>(includes backup)</small></span><strong id="five-attempt-time">--</strong></div>
+        </div>
         <p class="last-spoken">Last speech: <strong id="last-message">No message played yet.</strong></p>
         <button id="reset" class="secondary" disabled>Reset competition</button>
       </div>
     </section>
   </main>
-  <script src="{{ url_for('static', filename='app.js') }}?v=12"></script>
+  <script src="{{ url_for('static', filename='app.js') }}?v=13"></script>
 </body>
 </html>

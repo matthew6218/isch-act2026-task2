@@ -19,6 +19,8 @@ let pauseUntil = 0;
 let pauseStartedAt = 0;
 let completedPauseMs = 0;
 let attemptActive = false;
+let fourAttemptTime = null;
+let fiveAttemptTime = null;
 const completed = new Set();
 
 function errorMessage(error) {
@@ -181,6 +183,10 @@ function updateTimer() {
       attempts.push({ targetId: null, label: "No detection", duration: remainingAttemptDuration });
       remainingAttemptDuration = 0;
     }
+    fourAttemptTime ??= elapsed;
+    fiveAttemptTime = elapsed;
+    $("four-attempt-time").textContent = `${fourAttemptTime.toFixed(1)}s`;
+    $("five-attempt-time").textContent = `${fiveAttemptTime.toFixed(1)}s`;
     renderAttemptLog();
     finishCompetition(false);
   }
@@ -189,6 +195,8 @@ function updateTimer() {
 function resetCompetition() {
   completed.clear();
   attempts = [];
+  fourAttemptTime = null;
+  fiveAttemptTime = null;
   candidate = null;
   candidateSince = 0;
   lastTriggeredTarget = null;
@@ -202,6 +210,8 @@ function resetCompetition() {
   document.querySelectorAll("[data-target]").forEach((item) => item.classList.remove("complete"));
   $("completed-count").textContent = `0 / ${settings.winRequiredTargets}`;
   $("last-message").textContent = "No message played yet.";
+  $("four-attempt-time").textContent = "--";
+  $("five-attempt-time").textContent = "--";
   renderAttemptLog();
   $("meter-fill").style.width = "0%";
   $("status").classList.remove("win", "lose");
@@ -396,6 +406,14 @@ function recordAttempt(target, now) {
     $("last-message").textContent = settings.noDetectionSpeech;
   }
   renderAttemptLog();
+  if (attempts.length === 4) {
+    fourAttemptTime = elapsedSeconds();
+    $("four-attempt-time").textContent = `${fourAttemptTime.toFixed(1)}s`;
+  }
+  if (attempts.length === 5) {
+    fiveAttemptTime = elapsedSeconds();
+    $("five-attempt-time").textContent = `${fiveAttemptTime.toFixed(1)}s`;
+  }
   log(`Attempt ${attempts.length} recorded`, result);
 
   if (attempts.length >= MAX_ATTEMPTS) {

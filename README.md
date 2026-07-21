@@ -3,13 +3,13 @@
 A Flask web app that uses a Teachable Machine image model to detect three targets and the browser's built-in text-to-speech to announce them:
 
 - `Pen` → “This is a pen.”
-- `Helicea` → “Hello Helicea.”
-- `Connie` → “Hello Connie.”
+- `iSchool Cube` → “This is an iSchool cube.”
+- `Tissue` → “This is a tissue.”
 
 ## Prepare the model
 
 1. Create an Image Project in Teachable Machine.
-2. Train classes named `Pen`, `Helicea`, and `Connie` (capitalization does not matter). Add varied angles, lighting, distance, and backgrounds to improve accuracy.
+2. Train classes named `Pen`, `iSchool Cube`, and `Tissue` (capitalization does not matter). Add varied angles, lighting, distance, and backgrounds to improve accuracy.
 3. Export as TensorFlow.js.
 4. Download the files into `static/model/`, or paste the model's shared URL into the app.
 

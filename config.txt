@@ -58,11 +58,11 @@ TARGET_1_LABEL=Pen
 TARGET_1_SPEECH=This is a pen.
 
 # --- TARGET 2 ----------------------------------------------------
-TARGET_2_CLASS=Helicea
-TARGET_2_LABEL=Helicea
-TARGET_2_SPEECH=Hello Helicea.
+TARGET_2_CLASS=iSchool Cube
+TARGET_2_LABEL=iSchool Cube
+TARGET_2_SPEECH=This is an iSchool cube.
 
 # --- TARGET 3 ----------------------------------------------------
-TARGET_3_CLASS=Connie
-TARGET_3_LABEL=Connie
-TARGET_3_SPEECH=Hello Connie.
+TARGET_3_CLASS=Tissue
+TARGET_3_LABEL=Tissue
+TARGET_3_SPEECH=This is a tissue.

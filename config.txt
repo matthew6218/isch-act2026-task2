@@ -28,6 +28,14 @@ REQUIRED_STABLE_MS=600
 # REARM_MS: how long a target must leave view before it can speak again.
 REARM_MS=900
 
+# PAUSE_BETWEEN_DETECTIONS_MS: waiting time after each of the 5 attempts.
+# Example: 2000 means pause for 2 seconds before the next attempt.
+PAUSE_BETWEEN_DETECTIONS_MS=1000
+
+# DETECTION_TIMEOUT_SECONDS: time allowed for each attempt.
+# If no accurate result is found, that attempt logs "No detection".
+DETECTION_TIMEOUT_SECONDS=10
+
 # --- WIN CONDITION ----------------------------------------------
 # WIN_REQUIRED_TARGETS: number of different targets needed to win.
 # Use 1, 2, or 3. The default 3 requires every target below.
@@ -40,7 +48,7 @@ WIN_TIME_LIMIT_SECONDS=0
 # Messages shown when the group wins or runs out of time.
 # {time} is automatically replaced by the completion time.
 WIN_MESSAGE=You win! Completed the challenge in {time} seconds.
-LOSE_MESSAGE=Time is up. Try again!
+LOSE_MESSAGE=Five attempts finished without completing the win condition. Try again!
 
 # --- TEXT TO SPEECH ---------------------------------------------
 # Common language codes: en-US, en-GB, zh-HK.

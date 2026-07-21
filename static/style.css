@@ -58,6 +58,11 @@ small, #status { color: var(--muted); }
 .task-list small { color: var(--muted); }
 .last-spoken { min-height: 48px; }
 .last-spoken strong { color: var(--accent); }
+.attempt-log { width: 100%; margin: 4px 0 22px; text-align: left; }
+.attempt-log h2 { margin: 0 0 8px; font-size: 1.05rem; }
+.attempt-log li { grid-template-columns: 82px 1fr auto; }
+.attempt-log li.pending { color: var(--muted); }
+.attempt-log li.no-detection strong { color: #ff7777; }
 .score { display: flex; align-items: center; gap: 24px; }
 .score div { display: flex; flex-direction: column; }
 .score strong { font-size: 3.8rem; }

@@ -34,6 +34,7 @@ def read_config() -> dict:
     speech_rate = float(values.get("SPEECH_RATE", "1.0"))
     required_targets = int(values.get("WIN_REQUIRED_TARGETS", "3"))
     time_limit = float(values.get("WIN_TIME_LIMIT_SECONDS", "0"))
+    detection_timeout = float(values.get("DETECTION_TIMEOUT_SECONDS", "10"))
     if not 0 < confidence <= 1:
         raise ValueError("CONFIDENCE_THRESHOLD must be greater than 0 and at most 1")
     if not 0.1 <= speech_rate <= 10:
@@ -42,12 +43,16 @@ def read_config() -> dict:
         raise ValueError(f"WIN_REQUIRED_TARGETS must be between 1 and {len(targets)}")
     if time_limit < 0:
         raise ValueError("WIN_TIME_LIMIT_SECONDS cannot be negative")
+    if detection_timeout <= 0:
+        raise ValueError("DETECTION_TIMEOUT_SECONDS must be greater than 0")
 
     return {
         "modelUrl": values.get("MODEL_URL", ""),
         "confidenceThreshold": confidence,
         "requiredStableMs": max(0, int(values.get("REQUIRED_STABLE_MS", "600"))),
         "rearmMs": max(0, int(values.get("REARM_MS", "900"))),
+        "pauseBetweenDetectionsMs": max(0, int(values.get("PAUSE_BETWEEN_DETECTIONS_MS", "1000"))),
+        "detectionTimeoutSeconds": detection_timeout,
         "speechLanguage": values.get("SPEECH_LANGUAGE", "en-US"),
         "speechRate": speech_rate,
         "winRequiredTargets": required_targets,

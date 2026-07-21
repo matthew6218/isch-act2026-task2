@@ -1,4 +1,5 @@
 const $ = (id) => document.getElementById(id);
+const MAX_ATTEMPTS = 5;
 
 let settings;
 let model;
@@ -11,6 +12,10 @@ let lastTargetSeenAt = 0;
 let competitionStartedAt = 0;
 let competitionFinished = false;
 let timerId = null;
+let attempts = [];
+let attemptStartedAt = 0;
+let pauseUntil = 0;
+let attemptActive = false;
 const completed = new Set();
 
 function errorMessage(error) {
@@ -65,6 +70,29 @@ function renderTasks() {
   }));
 }
 
+function renderAttemptLog() {
+  const rows = Array.from({ length: MAX_ATTEMPTS }, (_, index) => {
+    const result = attempts[index];
+    const item = document.createElement("li");
+    const number = document.createElement("span");
+    const outcome = document.createElement("strong");
+    const time = document.createElement("em");
+    number.textContent = `Attempt ${index + 1}`;
+    if (result) {
+      outcome.textContent = result.label;
+      time.textContent = `${result.at.toFixed(1)}s`;
+      if (!result.targetId) item.classList.add("no-detection");
+    } else {
+      item.classList.add("pending");
+      outcome.textContent = "Waiting";
+      time.textContent = "--";
+    }
+    item.append(number, outcome, time);
+    return item;
+  });
+  $("attempt-log").replaceChildren(...rows);
+}
+
 async function loadSettings() {
   const response = await fetch("/api/config", { cache: "no-store" });
   const data = await response.json();
@@ -81,7 +109,14 @@ async function loadSettings() {
   if (!$("stable-input").value) {
     $("stable-input").value = settings.requiredStableMs / 1000;
   }
+  if (!$("pause-input").value) {
+    $("pause-input").value = settings.pauseBetweenDetectionsMs / 1000;
+  }
+  if (!$("timeout-input").value) {
+    $("timeout-input").value = settings.detectionTimeoutSeconds;
+  }
   renderTasks();
+  renderAttemptLog();
   $("completed-count").textContent = `0 / ${settings.winRequiredTargets}`;
   $("reset").disabled = false;
   log("Settings loaded from config.txt", settings);
@@ -128,20 +163,29 @@ function updateTimer() {
   const elapsed = elapsedSeconds();
   $("time").textContent = `${elapsed.toFixed(1)}s`;
   if (!competitionFinished && settings.winTimeLimitSeconds > 0 && elapsed >= settings.winTimeLimitSeconds) {
+    while (attempts.length < MAX_ATTEMPTS) {
+      attempts.push({ targetId: null, label: "No detection", at: elapsed });
+    }
+    renderAttemptLog();
     finishCompetition(false);
   }
 }
 
 function resetCompetition() {
   completed.clear();
+  attempts = [];
   candidate = null;
   candidateSince = 0;
   lastTriggeredTarget = null;
   competitionFinished = false;
   competitionStartedAt = running ? performance.now() : 0;
+  attemptStartedAt = competitionStartedAt;
+  pauseUntil = 0;
+  attemptActive = running;
   document.querySelectorAll("[data-target]").forEach((item) => item.classList.remove("complete"));
   $("completed-count").textContent = `0 / ${settings.winRequiredTargets}`;
   $("last-message").textContent = "No message played yet.";
+  renderAttemptLog();
   $("meter-fill").style.width = "0%";
   $("status").classList.remove("win", "lose");
   if (running) $("status").textContent = "Competition reset. Start detecting targets.";
@@ -158,14 +202,24 @@ async function start() {
     await loadSettings();
     const confidencePercent = Number($("confidence-input").value);
     const stableSeconds = Number($("stable-input").value);
+    const pauseSeconds = Number($("pause-input").value);
+    const timeoutSeconds = Number($("timeout-input").value);
     if (!Number.isFinite(confidencePercent) || confidencePercent < 1 || confidencePercent > 100) {
       throw new Error("Minimum confidence must be between 1% and 100%.");
     }
     if (!Number.isFinite(stableSeconds) || stableSeconds < 0.1 || stableSeconds > 10) {
       throw new Error("Accurate detection time must be between 0.1 and 10 seconds.");
     }
+    if (!Number.isFinite(pauseSeconds) || pauseSeconds < 0 || pauseSeconds > 60) {
+      throw new Error("Pause between attempts must be between 0 and 60 seconds.");
+    }
+    if (!Number.isFinite(timeoutSeconds) || timeoutSeconds < 0.5 || timeoutSeconds > 300) {
+      throw new Error("Attempt time limit must be between 0.5 and 300 seconds.");
+    }
     settings.confidenceThreshold = confidencePercent / 100;
     settings.requiredStableMs = stableSeconds * 1000;
+    settings.pauseBetweenDetectionsMs = pauseSeconds * 1000;
+    settings.detectionTimeoutSeconds = timeoutSeconds;
     if (!window.tf || !window.tmImage) throw new Error("Recognition libraries did not load. Check the internet connection.");
     const base = normalizeModelBase($("model-url").value);
     model = await tmImage.load(`${base}model.json`, `${base}metadata.json`);
@@ -189,7 +243,7 @@ async function start() {
     const timeRule = settings.winTimeLimitSeconds > 0
       ? ` within ${settings.winTimeLimitSeconds} seconds`
       : "";
-    $("status").textContent = `Ready - detect ${settings.winRequiredTargets} different target(s)${timeRule}.`;
+    $("status").textContent = `Attempt 1 of ${MAX_ATTEMPTS}: show an object${timeRule}.`;
     log("Competition started", { classes: labels });
     requestAnimationFrame(loop);
   } catch (error) {
@@ -206,6 +260,8 @@ function setDetectionControls(isRunning) {
   $("model-url").disabled = isRunning;
   $("confidence-input").disabled = isRunning;
   $("stable-input").disabled = isRunning;
+  $("pause-input").disabled = isRunning;
+  $("timeout-input").disabled = isRunning;
   $("camera-select").disabled = isRunning;
   $("refresh-cameras").disabled = isRunning;
 }
@@ -227,6 +283,20 @@ function stopDetection() {
 async function loop(now) {
   if (!running) return;
   try {
+    if (!attemptActive) {
+      if (now < pauseUntil) {
+        const remaining = Math.max(0, (pauseUntil - now) / 1000).toFixed(1);
+        $("status").textContent = `Next attempt starts in ${remaining} seconds.`;
+        requestAnimationFrame(loop);
+        return;
+      }
+      startNextAttempt(now);
+    }
+    if ((now - attemptStartedAt) / 1000 >= settings.detectionTimeoutSeconds) {
+      recordAttempt(null, now);
+      requestAnimationFrame(loop);
+      return;
+    }
     webcam.update();
     const predictions = await model.predict(webcam.canvas);
     const best = predictions.reduce((a, b) => a.probability > b.probability ? a : b);
@@ -274,14 +344,50 @@ function triggerTarget(target) {
   $("completed-count").textContent = `${completed.size} / ${settings.winRequiredTargets}`;
   $("last-message").textContent = target.speech;
   log("Target detected", { target: target.label, speech: target.speech });
+  recordAttempt(target, performance.now());
+}
 
-  if (completed.size >= settings.winRequiredTargets) finishCompetition(true);
+function startNextAttempt(now) {
+  attemptActive = true;
+  attemptStartedAt = now;
+  pauseUntil = 0;
+  candidate = null;
+  candidateSince = 0;
+  lastTriggeredTarget = null;
+  $("meter-fill").style.width = "0%";
+  $("status").textContent = `Attempt ${attempts.length + 1} of ${MAX_ATTEMPTS}: show an object.`;
+}
+
+function recordAttempt(target, now) {
+  if (!running || !attemptActive || attempts.length >= MAX_ATTEMPTS) return;
+  attemptActive = false;
+  candidate = null;
+  candidateSince = 0;
+  $("meter-fill").style.width = "0%";
+  const result = {
+    targetId: target?.id || null,
+    label: target?.label || "No detection",
+    at: (now - competitionStartedAt) / 1000,
+  };
+  attempts.push(result);
+  renderAttemptLog();
+  log(`Attempt ${attempts.length} recorded`, result);
+
+  if (attempts.length >= MAX_ATTEMPTS) {
+    finishCompetition(completed.size >= settings.winRequiredTargets);
+    return;
+  }
+  pauseUntil = now + settings.pauseBetweenDetectionsMs;
+  if (settings.pauseBetweenDetectionsMs === 0) startNextAttempt(now);
 }
 
 function finishCompetition(won) {
   if (competitionFinished) return;
   competitionFinished = true;
+  running = false;
   clearInterval(timerId);
+  if (webcam && typeof webcam.stop === "function") webcam.stop();
+  setDetectionControls(false);
   const time = elapsedSeconds().toFixed(1);
   $("time").textContent = `${time}s`;
   $("status").textContent = won

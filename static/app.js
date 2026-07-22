@@ -38,10 +38,27 @@ function log(message, details) {
   }
 }
 
-function normalizeModelBase(value) {
+function getModelFiles(value) {
   const trimmed = value.trim();
   if (!trimmed) throw new Error("Enter a Teachable Machine model URL first.");
-  return trimmed.endsWith("/") ? trimmed : `${trimmed}/`;
+  let url;
+  try {
+    url = new URL(trimmed, window.location.href);
+  } catch {
+    throw new Error("Enter a valid Teachable Machine model URL.");
+  }
+  url.hash = "";
+  url.search = "";
+  const filename = url.pathname.split("/").pop().toLowerCase();
+  if (filename === "model.json" || filename === "metadata.json") {
+    url.pathname = url.pathname.slice(0, url.pathname.lastIndexOf("/") + 1);
+  } else if (!url.pathname.endsWith("/")) {
+    url.pathname += "/";
+  }
+  return {
+    modelUrl: new URL("model.json", url).href,
+    metadataUrl: new URL("metadata.json", url).href,
+  };
 }
 
 function classToTarget(className) {
@@ -248,8 +265,9 @@ async function start() {
     settings.pauseBetweenDetectionsMs = pauseSeconds * 1000;
     settings.detectionTimeoutSeconds = timeoutSeconds;
     if (!window.tf || !window.tmImage) throw new Error("Recognition libraries did not load. Check the internet connection.");
-    const base = normalizeModelBase($("model-url").value);
-    model = await tmImage.load(`${base}model.json`, `${base}metadata.json`);
+    const modelFiles = getModelFiles($("model-url").value);
+    log("Loading model selected by user", modelFiles);
+    model = await tmImage.load(modelFiles.modelUrl, modelFiles.metadataUrl);
     const labels = model.getClassLabels();
     const missing = settings.targets.filter((target) => !labels.some(
       (label) => label.trim().toLowerCase() === target.className.trim().toLowerCase(),
@@ -443,6 +461,10 @@ function finishCompetition(won) {
 }
 
 $("start").addEventListener("click", start);
+$("model-url").addEventListener("input", () => {
+  // Keep the user's latest choice across refreshes; config.txt remains the fallback.
+  localStorage.setItem("modelUrl", $("model-url").value.trim());
+});
 $("stop").addEventListener("click", stopDetection);
 $("refresh-cameras").addEventListener("click", async () => {
   $("refresh-cameras").disabled = true;
@@ -467,6 +489,9 @@ $("copy-log").addEventListener("click", async () => {
 
 window.addEventListener("error", (event) => log("Browser error", event.message));
 window.addEventListener("unhandledrejection", (event) => log("Unhandled rejection", errorMessage(event.reason)));
+const savedModelUrl = localStorage.getItem("modelUrl");
+if (savedModelUrl) $("model-url").value = savedModelUrl;
+
 loadSettings().then(() => {
   $("status").textContent = "Settings loaded. Waiting to start.";
   refreshCameraList(false).catch((error) => log("Could not list cameras yet", errorMessage(error)));

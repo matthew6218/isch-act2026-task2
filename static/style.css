@@ -9,7 +9,8 @@ body { margin: 0; min-height: 100vh; color: var(--ink); background: radial-gradi
 .brand-logos > span { width: 1px; height: 36px; background: #ffffff55; }
 main { width: min(1050px, calc(100% - 32px)); margin: 0 auto; padding: 54px 0; }
 header { text-align: center; margin-bottom: 28px; }
-h1 { font-size: clamp(2.2rem, 7vw, 4.8rem); line-height: .95; margin: 8px 0 16px; letter-spacing: -.06em; }
+h1 { display: flex; align-items: center; justify-content: center; gap: 12px; font-size: clamp(2.2rem, 7vw, 4.8rem); line-height: .95; margin: 8px 0 16px; letter-spacing: -.06em; }
+.title-badge { padding: 7px 10px; border-radius: 999px; color: #17130a; background: var(--accent); font-size: clamp(.65rem, 1.5vw, .85rem); line-height: 1; letter-spacing: .06em; text-transform: uppercase; }
 header p { color: var(--muted); }
 .eyebrow { color: var(--accent); font-weight: 800; font-size: .76rem; letter-spacing: .18em; }
 .card { border: 1px solid var(--line); border-radius: 20px; background: color-mix(in srgb, var(--card) 92%, transparent); box-shadow: 0 20px 70px #0005; }

@@ -1,0 +1,153 @@
+GUIDELINE: CUSTOMIZING AND REUSING THE OBJECT DETECTOR
+======================================================
+
+1. Editing config.txt
+---------------------
+
+Open config.txt in a text editor. Change only the value after each = sign.
+Keep every KEY name and the = sign unchanged. Do not add quotation marks.
+Save the file, then refresh the browser before starting detection again.
+
+Example:
+TARGET_1_LABEL=Red Bottle
+
+Lines beginning with # are comments and are ignored by the program.
+
+
+2. Changing the displayed and spoken output
+--------------------------------------------
+
+Each target has three related settings:
+
+TARGET_1_CLASS=Pen
+TARGET_1_LABEL=Pen
+TARGET_1_SPEECH=This is a pen.
+
+- CLASS is the class name produced by the Teachable Machine model. It must
+  match the model class exactly (capitalization is ignored, but spelling and
+  spaces must match).
+- LABEL is the friendly text displayed on the webpage and in the attempt log.
+- SPEECH is the sentence read aloud after that object is detected.
+
+To change only the output, edit LABEL and SPEECH. For example:
+
+TARGET_1_CLASS=Pen
+TARGET_1_LABEL=Writing Tool
+TARGET_1_SPEECH=You found the writing tool.
+
+Other output settings are:
+
+- NO_DETECTION_SPEECH: spoken when an attempt times out.
+- WIN_MESSAGE: displayed after the win condition is completed. Keep {time}
+  wherever the completion time should appear.
+- LOSE_MESSAGE: displayed when all attempts finish without a win.
+- SPEECH_LANGUAGE: browser speech language, such as en-US, en-GB, or zh-HK.
+- SPEECH_RATE: speech speed; 1.0 is normal.
+
+
+3. Detecting different objects
+------------------------------
+
+Changing config.txt does not teach the existing model a new object. First
+create or retrain an Image Project in Google Teachable Machine:
+
+1. Create one class for each object and collect many example images.
+2. Include different angles, distances, lighting, and backgrounds. Add a
+   useful background/negative class if the model otherwise triggers falsely.
+3. Train and test the model with objects and scenes not used for training.
+4. Export the model as TensorFlow.js and obtain its shared model URL.
+5. Put that URL after MODEL_URL= in config.txt. Do not add quotation marks.
+6. Copy the model's three object class names into TARGET_1_CLASS,
+   TARGET_2_CLASS, and TARGET_3_CLASS.
+7. Set the LABEL and SPEECH values for each object, save, and refresh.
+
+Example for three new objects:
+
+MODEL_URL=https://teachablemachine.withgoogle.com/models/YOUR_MODEL_ID/
+TARGET_1_CLASS=Bottle
+TARGET_1_LABEL=Water Bottle
+TARGET_1_SPEECH=This is a water bottle.
+TARGET_2_CLASS=Book
+TARGET_2_LABEL=Book
+TARGET_2_SPEECH=This is a book.
+TARGET_3_CLASS=Phone
+TARGET_3_LABEL=Mobile Phone
+TARGET_3_SPEECH=This is a mobile phone.
+
+This project is currently designed for exactly three configured targets and
+five attempts. config.txt can rename those three targets, but adding or
+removing targets requires code changes in app.py and possibly static/app.js.
+Extra model classes are allowed, but classes not listed as a target are not
+counted as successful detections.
+
+
+4. Adjusting detection behaviour
+--------------------------------
+
+- CONFIDENCE_THRESHOLD: 0.01 to 1.00. A higher value reduces false matches
+  but makes detection harder. Start around 0.85.
+- REQUIRED_STABLE_MS: how long the same confident prediction must remain
+  visible. Increase it if detections flicker or trigger accidentally.
+- REARM_MS: how long a detected target must leave view before it can trigger
+  again.
+- PAUSE_BETWEEN_DETECTIONS_MS: delay after each attempt.
+- DETECTION_TIMEOUT_SECONDS: maximum time allowed for one attempt.
+- WIN_REQUIRED_TARGETS: number of different configured targets required to
+  win; in this version it must be 1, 2, or 3.
+- WIN_TIME_LIMIT_SECONDS: overall time limit, or 0 for no time limit.
+
+If detection is unreliable, improve the training images before lowering the
+confidence threshold too far.
+
+
+5. Reusing this detector in another project
+-------------------------------------------
+
+The simplest method is to copy the whole project, including:
+
+- app.py
+- config.txt
+- requirements.txt
+- templates/
+- static/
+- logos/ (if the page still uses the supplied logos)
+
+Then install and run it from the copied project folder:
+
+  python -m venv .venv
+  .venv\Scripts\Activate.ps1
+  python -m pip install -r requirements.txt
+  python app.py
+
+Open http://127.0.0.1:5000, allow camera access, and test every target.
+
+When integrating it into an existing Flask project:
+
+1. Keep config.txt beside the Python file, or change CONFIG_FILE in app.py to
+   its new location.
+2. Copy the read_config() function and expose its result through an endpoint
+   equivalent to /api/config.
+3. Include the Teachable Machine/TensorFlow.js scripts used by
+   templates/index.html.
+4. Copy or merge templates/index.html, static/app.js, and static/style.css.
+5. Preserve the HTML element IDs referenced by static/app.js, or update the
+   JavaScript selectors when changing those IDs.
+6. Avoid route-name conflicts when merging the / and /api/config routes.
+7. Serve the site through localhost or HTTPS because browsers normally block
+   camera access on insecure remote pages.
+
+After integration, check the browser console and the on-page debug log for
+model-loading, camera-permission, class-name, or configuration errors.
+
+
+6. Common problems
+------------------
+
+- "Target needs CLASS, LABEL, and SPEECH": one of those values is blank.
+- Nothing is detected: confirm MODEL_URL is correct and every CLASS matches
+  the trained model's class name.
+- Wrong object triggers: improve training data, raise CONFIDENCE_THRESHOLD,
+  or increase REQUIRED_STABLE_MS.
+- No voice: check browser audio permissions/support and SPEECH_LANGUAGE.
+- Config changes do not appear: save config.txt, stop detection, and refresh
+  the browser page.

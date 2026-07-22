@@ -11,7 +11,8 @@
 # Lines beginning with # are comments and do not affect the program.
 
 # --- MODEL -------------------------------------------------------
-# Paste the shared Teachable Machine model URL after the = sign.
+# Paste the shared Teachable Machine model-folder URL after the = sign.
+# Do not paste a model.json or metadata.json file URL. Class order does not matter.
 # Leave blank if students should paste the URL on the web page.
 
 MODEL_URL=

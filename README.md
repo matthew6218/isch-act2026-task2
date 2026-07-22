@@ -9,7 +9,7 @@ A Flask web app that uses a Teachable Machine image model to detect three target
 ## Prepare the model
 
 1. Create an Image Project in Teachable Machine.
-2. Train classes named `Pen`, `iSchool Cube`, and `Tissue` (capitalization does not matter). Add varied angles, lighting, distance, and backgrounds to improve accuracy.
+2. Train classes named `Pen`, `iSchool Cube`, and `Tissue`. Their order does not matter, and capitalization, spaces, and punctuation are ignored when matching. Add varied angles, lighting, distance, and backgrounds to improve accuracy.
 3. Export as TensorFlow.js.
 4. Download the files into `static/model/`, or paste the model's shared URL into the app.
 

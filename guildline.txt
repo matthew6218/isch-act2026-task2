@@ -23,8 +23,9 @@ TARGET_1_CLASS=Pen
 TARGET_1_LABEL=Pen
 TARGET_1_SPEECH=This is a pen.
 
-- CLASS is the class name produced by the Teachable Machine model. It must
-  match the model class exactly (capitalization is ignored, but spelling and
+- CLASS is the class name produced by the Teachable Machine model. Its order
+  in the model does not matter. Capitalization, spaces, and punctuation are
+  ignored when matching, but spelling and
   spaces must match).
 - LABEL is the friendly text displayed on the webpage and in the attempt log.
 - SPEECH is the sentence read aloud after that object is detected.
@@ -56,7 +57,8 @@ create or retrain an Image Project in Google Teachable Machine:
    useful background/negative class if the model otherwise triggers falsely.
 3. Train and test the model with objects and scenes not used for training.
 4. Export the model as TensorFlow.js and obtain its shared model URL.
-5. Put that URL after MODEL_URL= in config.txt. Do not add quotation marks.
+5. Put the shared model-folder URL after MODEL_URL= in config.txt. Do not add
+   quotation marks, and do not paste a model.json or metadata.json file URL.
 6. Copy the model's three object class names into TARGET_1_CLASS,
    TARGET_2_CLASS, and TARGET_3_CLASS.
 7. Set the LABEL and SPEECH values for each object, save, and refresh.

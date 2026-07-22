@@ -4,6 +4,7 @@ const PAUSE_TIMER_WEIGHT = 0.5;
 
 let settings;
 let model;
+let modelClassTargets = new Map();
 let webcam;
 let running = false;
 let candidate = null;
@@ -51,8 +52,9 @@ function getModelFiles(value) {
   url.search = "";
   const filename = url.pathname.split("/").pop().toLowerCase();
   if (filename === "model.json" || filename === "metadata.json") {
-    url.pathname = url.pathname.slice(0, url.pathname.lastIndexOf("/") + 1);
-  } else if (!url.pathname.endsWith("/")) {
+    throw new Error("Paste the shared model-folder URL, not a JSON file URL.");
+  }
+  if (!url.pathname.endsWith("/")) {
     url.pathname += "/";
   }
   return {
@@ -61,9 +63,12 @@ function getModelFiles(value) {
   };
 }
 
+function normalizeClassName(value) {
+  return value.normalize("NFKC").trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
 function classToTarget(className) {
-  const normalized = className.trim().toLowerCase();
-  return settings.targets.find((target) => normalized === target.className.trim().toLowerCase()) || null;
+  return modelClassTargets.get(normalizeClassName(className)) || null;
 }
 
 function speak(text) {
@@ -269,9 +274,15 @@ async function start() {
     log("Loading model selected by user", modelFiles);
     model = await tmImage.load(modelFiles.modelUrl, modelFiles.metadataUrl);
     const labels = model.getClassLabels();
-    const missing = settings.targets.filter((target) => !labels.some(
-      (label) => label.trim().toLowerCase() === target.className.trim().toLowerCase(),
+    const targetsByClass = new Map(settings.targets.map(
+      (target) => [normalizeClassName(target.className), target],
     ));
+    modelClassTargets = new Map(labels.map(
+      (label) => [normalizeClassName(label), targetsByClass.get(normalizeClassName(label))],
+    ).filter(([, target]) => target));
+    const missing = settings.targets.filter(
+      (target) => !modelClassTargets.has(normalizeClassName(target.className)),
+    );
     if (missing.length) {
       throw new Error(`Model is missing classes: ${missing.map((target) => target.className).join(", ")}. Found: ${labels.join(", ")}`);
     }
@@ -289,7 +300,7 @@ async function start() {
       ? ` within ${settings.winTimeLimitSeconds} seconds`
       : "";
     $("status").textContent = `Attempt 1 of ${MAX_ATTEMPTS}: show an object${timeRule}.`;
-    log("Competition started", { classes: labels });
+    log("Competition started (class order does not matter)", { classes: labels });
     requestAnimationFrame(loop);
   } catch (error) {
     const message = errorMessage(error);

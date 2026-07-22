@@ -58,7 +58,7 @@
         </label>
         <div class="number-input"><input id="timeout-input" type="number" min="0.5" max="300" step="0.5"><b>seconds</b></div>
       </div>
-      <small>Defaults are loaded from <code>config.txt</code>. Detection starts only after clicking <strong>Start detection</strong>.</small>
+      <small>Paste the shared model-folder link, not a JSON file. Class order does not matter. Defaults are loaded from <code>config.txt</code>.</small>
       <p id="status" role="status">Waiting to start.</p>
       <details class="diagnostics">
         <summary>Diagnostic log</summary>
@@ -98,6 +98,6 @@
       </div>
     </section>
   </main>
-  <script src="{{ url_for('static', filename='app.js') }}?v=14"></script>
+  <script src="{{ url_for('static', filename='app.js') }}?v=15"></script>
 </body>
 </html>

@@ -46,8 +46,11 @@ def read_config() -> dict:
     if detection_timeout <= 0:
         raise ValueError("DETECTION_TIMEOUT_SECONDS must be greater than 0")
 
+    local_model = Path(app.static_folder, "model")
+    local_model_available = (local_model / "model.json").is_file() and (local_model / "metadata.json").is_file()
+
     return {
-        "modelUrl": values.get("MODEL_URL", ""),
+        "modelUrl": values.get("MODEL_URL", "") or ("/static/model/" if local_model_available else ""),
         "confidenceThreshold": confidence,
         "requiredStableMs": max(0, int(values.get("REQUIRED_STABLE_MS", "600"))),
         "rearmMs": max(0, int(values.get("REARM_MS", "900"))),

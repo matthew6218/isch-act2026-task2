@@ -7,6 +7,7 @@ let model;
 let modelClassTargets = new Map();
 let webcam;
 let running = false;
+let runGeneration = 0;
 let candidate = null;
 let candidateSince = 0;
 let lastTriggeredTarget = null;
@@ -72,7 +73,10 @@ function classToTarget(className) {
 }
 
 function speak(text) {
-  if (!("speechSynthesis" in window)) throw new Error("Text-to-speech is not supported by this browser.");
+  if (!("speechSynthesis" in window)) {
+    log("Text-to-speech is not supported by this browser");
+    return;
+  }
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = settings.speechLanguage;
@@ -215,6 +219,7 @@ function updateTimer() {
 }
 
 function resetCompetition() {
+  if (running) runGeneration += 1;
   completed.clear();
   attempts = [];
   fourAttemptTime = null;
@@ -241,6 +246,10 @@ function resetCompetition() {
   clearInterval(timerId);
   timerId = running ? setInterval(updateTimer, 100) : null;
   updateTimer();
+  if (running) {
+    const generation = runGeneration;
+    requestAnimationFrame((now) => loop(now, generation));
+  }
 }
 
 async function start() {
@@ -301,8 +310,8 @@ async function start() {
       : "";
     $("status").textContent = `Attempt 1 of ${MAX_ATTEMPTS}: show an object${timeRule}.`;
     log("Competition started (class order does not matter)", { classes: labels });
-    requestAnimationFrame(loop);
   } catch (error) {
+    if (webcam && typeof webcam.stop === "function") webcam.stop();
     const message = errorMessage(error);
     $("status").textContent = `Could not start: ${message}`;
     $("start").disabled = false;
@@ -325,6 +334,7 @@ function setDetectionControls(isRunning) {
 function stopDetection() {
   if (!running) return;
   running = false;
+  runGeneration += 1;
   clearInterval(timerId);
   if (webcam && typeof webcam.stop === "function") webcam.stop();
   $("webcam").innerHTML = "<p>Camera preview</p>";
@@ -336,25 +346,26 @@ function stopDetection() {
   log("Detection stopped");
 }
 
-async function loop(now) {
-  if (!running) return;
+async function loop(now, generation) {
+  if (!running || generation !== runGeneration) return;
   try {
     if (!attemptActive) {
       if (now < pauseUntil) {
         const remaining = Math.max(0, (pauseUntil - now) / 1000).toFixed(1);
         $("status").textContent = `Next attempt starts in ${remaining} seconds.`;
-        requestAnimationFrame(loop);
+        requestAnimationFrame((nextNow) => loop(nextNow, generation));
         return;
       }
       startNextAttempt(now);
     }
     if ((now - attemptStartedAt) / 1000 >= settings.detectionTimeoutSeconds) {
       recordAttempt(null, now);
-      requestAnimationFrame(loop);
+      requestAnimationFrame((nextNow) => loop(nextNow, generation));
       return;
     }
     webcam.update();
     const predictions = await model.predict(webcam.canvas);
+    if (!running || generation !== runGeneration) return;
     const best = predictions.reduce((a, b) => a.probability > b.probability ? a : b);
     const target = classToTarget(best.className);
     $("detected-target").textContent = target ? target.label : best.className;
@@ -380,14 +391,16 @@ async function loop(now) {
       if (now - lastTargetSeenAt >= settings.rearmMs) lastTriggeredTarget = null;
     }
   } catch (error) {
+    if (!running || generation !== runGeneration) return;
     running = false;
+    runGeneration += 1;
     clearInterval(timerId);
     if (webcam && typeof webcam.stop === "function") webcam.stop();
     setDetectionControls(false);
     $("status").textContent = `Prediction failed: ${errorMessage(error)}`;
     return;
   }
-  requestAnimationFrame(loop);
+  requestAnimationFrame((nextNow) => loop(nextNow, generation));
 }
 
 function triggerTarget(target) {
@@ -413,7 +426,6 @@ function startNextAttempt(now) {
   pauseStartedAt = 0;
   candidate = null;
   candidateSince = 0;
-  lastTriggeredTarget = null;
   $("meter-fill").style.width = "0%";
   $("status").textContent = `Attempt ${attempts.length + 1} of ${MAX_ATTEMPTS}: show an object.`;
 }
@@ -458,6 +470,7 @@ function finishCompetition(won) {
   if (competitionFinished) return;
   competitionFinished = true;
   running = false;
+  runGeneration += 1;
   clearInterval(timerId);
   if (webcam && typeof webcam.stop === "function") webcam.stop();
   setDetectionControls(false);
